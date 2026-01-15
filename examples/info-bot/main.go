@@ -59,6 +59,14 @@ func main() {
 	sendPublicID := flag.Int64("send-public", 0, "Send message to chat by ID")
 	messageText := flag.String("message", "", "Message text to send")
 
+	// Message update flags
+	updateChatID := flag.Int64("update-chat", 0, "Chat ID for message update")
+	updatePostNo := flag.Int64("update-post", 0, "Post number to update")
+	updateE2E := flag.Bool("update-e2e", false, "Enable E2E encryption for updated message")
+	updateReplyNo := flag.Int64("update-reply", 0, "Reply post number for updated message")
+	updateQuote := flag.String("update-quote", "", "Quote text for updated message")
+	updateAttachments := flag.String("update-attachments", "", "Comma-separated list of attachment GUIDs")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `Info-Bot for Verbosity API v%s
 
@@ -106,9 +114,21 @@ EXAMPLES:
     # Show statistics for a chat
     %s -chat-stats 456 -token YOUR_TOKEN
 
+    # Send message to chat
+    %s -send-public 456 -message "Hello, chat!" -token YOUR_TOKEN
+
+    # Update message in chat
+    %s -update-chat 456 -update-post 123 -message "Updated message text" -token YOUR_TOKEN
+
+    # Update message with reply and E2E
+    %s -update-chat 456 -update-post 123 -update-reply 100 -update-e2e -message "Updated with reply" -token YOUR_TOKEN
+
+    # Update message with attachments
+    %s -update-chat 456 -update-post 123 -update-attachments "guid1,guid2,guid3" -message "Updated with files" -token YOUR_TOKEN
+
     # Use custom API URL
     %s -api-url https://custom-api.example.com -token YOUR_TOKEN
-`, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
+`, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
 	}
 
 	flag.Parse()
@@ -155,6 +175,7 @@ EXAMPLES:
 		*topOrgsByUsers, *myChats, *favoriteChats, *publicChats, *privateChats,
 		*myOrgs, *adminOrgs, *chatStats, *orgStats,
 		*sendPrivateID, *sendPublicID, *messageText,
+		*updateChatID, *updatePostNo, *updateE2E, *updateReplyNo, *updateQuote,
 	)
 
 	if operations == 0 {
@@ -192,9 +213,18 @@ EXAMPLES:
 		fmt.Println("  -top-orgs-users <n> Show top N organizations by users")
 		fmt.Println()
 		fmt.Println("Message Sending:")
-		fmt.Println("  -send-private <id>  Send private message to user by ID")
-		fmt.Println("  -send-public <id>   Send message to chat by ID")
-		fmt.Println("  -message <text>     Message text (use with -send-private or -send-public)")
+		fmt.Println("  -send-private <id>    Send private message to user by ID")
+		fmt.Println("  -send-public <id>     Send message to chat by ID")
+		fmt.Println("  -message <text>       Message text (use with -send-private or -send-public)")
+		fmt.Println()
+		fmt.Println("Message Updating:")
+		fmt.Println("  -update-chat <id>        Chat ID for message update")
+		fmt.Println("  -update-post <no>        Post number to update")
+		fmt.Println("  -update-e2e              Enable E2E encryption for updated message")
+		fmt.Println("  -update-reply <no>       Reply post number for updated message")
+		fmt.Println("  -update-quote <text>     Quote text for updated message")
+		fmt.Println("  -update-attachments <g1,g2,...>  Comma-separated list of attachment GUIDs")
+		fmt.Println("  -message <text>          New message text (required for update)")
 		fmt.Println()
 		fmt.Println("Options:")
 		fmt.Println("  -api-url <url>   API URL (default: https://api.verbosity.io)")
@@ -214,34 +244,40 @@ EXAMPLES:
 
 	// Выполняем все запрошенные операции
 	processOperations(client, config, &OperationsConfig{
-		UserID:          *userID,
-		UserName:        *userName,
-		ChatID:          *chatID,
-		ChatTitle:       *chatTitle,
-		OrgID:           *orgID,
-		OrgTitle:        *orgTitle,
-		ListChats:       *listChats,
-		ListOrgs:        *listOrgs,
-		ListUsers:       *listUsers,
-		GetChatMembers:  *getChatMembers,
-		GetChatAdmins:   *getChatAdmins,
-		GetOrgMembers:   *getOrgMembers,
-		GetOrgAdmins:    *getOrgAdmins,
-		TopChatsMembers: *topChatsByMembers,
-		TopChatsPosts:   *topChatsByPosts,
-		TopOrgsUsers:    *topOrgsByUsers,
-		MyChats:         *myChats,
-		FavoriteChats:   *favoriteChats,
-		PublicChats:     *publicChats,
-		PrivateChats:    *privateChats,
-		MyOrgs:          *myOrgs,
-		AdminOrgs:       *adminOrgs,
-		ChatStats:       *chatStats,
-		OrgStats:        *orgStats,
-		SendPrivateID:   *sendPrivateID,
-		SendPublicID:    *sendPublicID,
-		MessageText:     *messageText,
-		OutputMode:      *outputMode,
+		UserID:            *userID,
+		UserName:          *userName,
+		ChatID:            *chatID,
+		ChatTitle:         *chatTitle,
+		OrgID:             *orgID,
+		OrgTitle:          *orgTitle,
+		ListChats:         *listChats,
+		ListOrgs:          *listOrgs,
+		ListUsers:         *listUsers,
+		GetChatMembers:    *getChatMembers,
+		GetChatAdmins:     *getChatAdmins,
+		GetOrgMembers:     *getOrgMembers,
+		GetOrgAdmins:      *getOrgAdmins,
+		TopChatsMembers:   *topChatsByMembers,
+		TopChatsPosts:     *topChatsByPosts,
+		TopOrgsUsers:      *topOrgsByUsers,
+		MyChats:           *myChats,
+		FavoriteChats:     *favoriteChats,
+		PublicChats:       *publicChats,
+		PrivateChats:      *privateChats,
+		MyOrgs:            *myOrgs,
+		AdminOrgs:         *adminOrgs,
+		ChatStats:         *chatStats,
+		OrgStats:          *orgStats,
+		SendPrivateID:     *sendPrivateID,
+		SendPublicID:      *sendPublicID,
+		MessageText:       *messageText,
+		UpdateChatID:      *updateChatID,
+		UpdatePostNo:      *updatePostNo,
+		UpdateE2E:         *updateE2E,
+		UpdateReplyNo:     *updateReplyNo,
+		UpdateQuote:       *updateQuote,
+		UpdateAttachments: *updateAttachments,
+		OutputMode:        *outputMode,
 	})
 
 	elapsed := time.Since(startTime)
@@ -250,34 +286,40 @@ EXAMPLES:
 
 // OperationsConfig holds all operation flags
 type OperationsConfig struct {
-	UserID          int64
-	UserName        string
-	ChatID          int64
-	ChatTitle       string
-	OrgID           int64
-	OrgTitle        string
-	ListChats       bool
-	ListOrgs        bool
-	ListUsers       bool
-	GetChatMembers  int64
-	GetChatAdmins   int64
-	GetOrgMembers   int64
-	GetOrgAdmins    int64
-	TopChatsMembers int
-	TopChatsPosts   int
-	TopOrgsUsers    int
-	MyChats         bool
-	FavoriteChats   bool
-	PublicChats     bool
-	PrivateChats    bool
-	MyOrgs          bool
-	AdminOrgs       bool
-	ChatStats       int64
-	OrgStats        int64
-	SendPrivateID   int64
-	SendPublicID    int64
-	MessageText     string
-	OutputMode      string
+	UserID            int64
+	UserName          string
+	ChatID            int64
+	ChatTitle         string
+	OrgID             int64
+	OrgTitle          string
+	ListChats         bool
+	ListOrgs          bool
+	ListUsers         bool
+	GetChatMembers    int64
+	GetChatAdmins     int64
+	GetOrgMembers     int64
+	GetOrgAdmins      int64
+	TopChatsMembers   int
+	TopChatsPosts     int
+	TopOrgsUsers      int
+	MyChats           bool
+	FavoriteChats     bool
+	PublicChats       bool
+	PrivateChats      bool
+	MyOrgs            bool
+	AdminOrgs         bool
+	ChatStats         int64
+	OrgStats          int64
+	SendPrivateID     int64
+	SendPublicID      int64
+	MessageText       string
+	UpdateChatID      int64
+	UpdatePostNo      int64
+	UpdateE2E         bool
+	UpdateReplyNo     int64
+	UpdateQuote       string
+	UpdateAttachments string
+	OutputMode        string
 }
 
 func processOperations(client *verbosity.Client, config *verbosity.Config, ops *OperationsConfig) {
@@ -522,6 +564,39 @@ func processOperations(client *verbosity.Client, config *verbosity.Config, ops *
 			printMessageResponse(response, ops.OutputMode)
 		}
 	}
+
+	// Message update operations
+	if ops.UpdateChatID != 0 && ops.UpdatePostNo != 0 && ops.MessageText != "" {
+		updateReq := &verbosity.UpdateMessageRequest{
+			Text: ops.MessageText,
+			E2E:  &ops.UpdateE2E,
+		}
+
+		if ops.UpdateReplyNo != 0 {
+			updateReq.ReplyNo = &ops.UpdateReplyNo
+		}
+
+		if ops.UpdateQuote != "" {
+			updateReq.Quote = &ops.UpdateQuote
+		}
+
+		if ops.UpdateAttachments != "" {
+			// Parse comma-separated attachment GUIDs
+			attachments := strings.Split(ops.UpdateAttachments, ",")
+			for i := range attachments {
+				attachments[i] = strings.TrimSpace(attachments[i])
+			}
+			updateReq.Attachments = attachments
+		}
+
+		response, err := client.UpdateMessage(ops.UpdateChatID, ops.UpdatePostNo, updateReq)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error updating message: %v\n", err)
+		} else {
+			fmt.Printf("Message updated in chat %d (post %d):\n", ops.UpdateChatID, ops.UpdatePostNo)
+			printUpdateMessageResponse(response, ops.OutputMode)
+		}
+	}
 }
 
 // Вспомогательные функции для вывода
@@ -537,6 +612,16 @@ func printPrivateMessageResponse(resp *verbosity.PrivateMessageResponse, mode st
 	data := map[string]interface{}{
 		"chat_id": resp.ChatID,
 		"post_no": resp.PostNo,
+	}
+	printData(data, mode)
+}
+
+func printUpdateMessageResponse(resp *verbosity.UpdateMessageResponse, mode string) {
+	data := map[string]interface{}{
+		"uuid":    resp.UUID,
+		"chat_id": resp.ChatID,
+		"post_no": resp.PostNo,
+		"version": resp.Version,
 	}
 	printData(data, mode)
 }

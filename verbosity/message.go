@@ -190,3 +190,68 @@ func (c *Client) SendMessageToAllMyChats(text string) ([]MessageResponse, error)
 
 	return c.BroadcastMessage(chatIDs, text)
 }
+
+// UpdateMessage updates an existing message in a chat.
+//
+// API: PUT /msg/post/{chat_id}/{post_no}
+func (c *Client) UpdateMessage(chatID, postNo int64, updateReq *UpdateMessageRequest) (*UpdateMessageResponse, error) {
+	if chatID == 0 {
+		return nil, fmt.Errorf("chat_id cannot be zero")
+	}
+	if postNo == 0 {
+		return nil, fmt.Errorf("post_no cannot be zero")
+	}
+	if updateReq == nil {
+		return nil, fmt.Errorf("update_request cannot be nil")
+	}
+	if updateReq.Text == "" {
+		return nil, fmt.Errorf("text cannot be empty")
+	}
+
+	body, err := json.Marshal(updateReq)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal request body: %w", err)
+	}
+
+	url := fmt.Sprintf("/msg/post/%d/%d", chatID, postNo)
+	req, err := c.newRequest(http.MethodPut, url, nil, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	var response UpdateMessageResponse
+	if err := c.do(req, &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+// UpdateMessageWithAttachments updates a message with new attachments.
+func (c *Client) UpdateMessageWithAttachments(chatID, postNo int64, text string, attachments []string) (*UpdateMessageResponse, error) {
+	updateReq := &UpdateMessageRequest{
+		Text:        text,
+		Attachments: attachments,
+	}
+	return c.UpdateMessage(chatID, postNo, updateReq)
+}
+
+// UpdateMessageWithReply updates a message and sets reply reference.
+func (c *Client) UpdateMessageWithReply(chatID, postNo, replyPostNo int64, text string) (*UpdateMessageResponse, error) {
+	updateReq := &UpdateMessageRequest{
+		Text:    text,
+		ReplyNo: &replyPostNo,
+	}
+	return c.UpdateMessage(chatID, postNo, updateReq)
+}
+
+// UpdateMessageE2E updates a message with E2E encryption flag.
+func (c *Client) UpdateMessageE2E(chatID, postNo int64, text string, e2e bool) (*UpdateMessageResponse, error) {
+	e2eFlag := e2e
+	updateReq := &UpdateMessageRequest{
+		Text: text,
+		E2E:  &e2eFlag,
+	}
+	return c.UpdateMessage(chatID, postNo, updateReq)
+}

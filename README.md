@@ -172,6 +172,29 @@ responses, err := client.BroadcastMessage([]int64{chatID1, chatID2}, "Hello all!
 responses, err := client.SendMessageToAllMyChats("Hello everyone!")
 ```
 
+### Обновление сообщений
+
+```go
+// Обновить существующее сообщение в чате
+updateReq := &verbosity.UpdateMessageRequest{
+    Text: "Updated message text",
+    E2E:  boolPtr(true),
+    ReplyNo: int64Ptr(123),
+    Quote: stringPtr("Original message"),
+    Attachments: []string{"guid1", "guid2"},
+}
+response, err := client.UpdateMessage(chatID, postNo, updateReq)
+
+// Обновить сообщение с вложениями
+response, err := client.UpdateMessageWithAttachments(chatID, postNo, "Message with files", []string{"guid1", "guid2"})
+
+// Обновить сообщение с ответом
+response, err := client.UpdateMessageWithReply(chatID, postNo, replyPostNo, "Reply message")
+
+// Обновить сообщение с E2E шифрованием
+response, err := client.UpdateMessageE2E(chatID, postNo, "E2E message", true)
+```
+
 ### Загрузка файлов
 
 ```go

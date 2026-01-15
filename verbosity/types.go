@@ -137,3 +137,20 @@ type ValidationErrorResponse struct {
 	Extra             interface{}       `json:"extra,omitempty"`
 	Error             string            `json:"error"`
 }
+
+// UpdateMessageRequest represents a request to update an existing message.
+type UpdateMessageRequest struct {
+	Text        string   `json:"text,omitempty"`
+	E2E         *bool    `json:"e2e,omitempty"`
+	ReplyNo     *int64   `json:"reply_no,omitempty"`
+	Quote       *string  `json:"quote,omitempty"`
+	Attachments []string `json:"attachments,omitempty"`
+}
+
+// UpdateMessageResponse represents the response for message update.
+type UpdateMessageResponse struct {
+	UUID    string `json:"uuid"`
+	ChatID  int64  `json:"chat_id"`
+	PostNo  int64  `json:"post_no"`
+	Version *int   `json:"ver,omitempty"`
+}

@@ -75,6 +75,9 @@ make install-tools
 # Топ-5 чатов по количеству участников
 ./info-bot -top-chats-members 5 -token YOUR_TOKEN
 
+# Обновить сообщение в чате
+./info-bot -update-chat 123 -update-post 456 -message "Updated text" -token YOUR_TOKEN
+
 # Использование кастомных URL
 ./info-bot -api-url https://custom-api.example.com -token YOUR_TOKEN
 
@@ -147,6 +150,25 @@ export VERBOSITY_OUTPUT_MODE="text"  # text, json, json-pretty
 
 # Рассылка в несколько чатов
 ./info-bot -send-broadcast 123,456,789 -message "Broadcast message" -token YOUR_TOKEN
+```
+
+### Обновление сообщений
+
+```bash
+# Обновить сообщение в чате
+./info-bot -update-chat 123 -update-post 456 -message "Updated message" -token YOUR_TOKEN
+
+# Обновить сообщение с E2E шифрованием
+./info-bot -update-chat 123 -update-post 456 -update-e2e -message "E2E updated message" -token YOUR_TOKEN
+
+# Обновить сообщение с ответом
+./info-bot -update-chat 123 -update-post 456 -update-reply 789 -message "Updated with reply" -token YOUR_TOKEN
+
+# Обновить сообщение с вложениями
+./info-bot -update-chat 123 -update-post 456 -update-attachments "guid1,guid2,guid3" -message "Updated with files" -token YOUR_TOKEN
+
+# Обновить сообщение с цитатой
+./info-bot -update-chat 123 -update-post 456 -update-quote "Original message text" -message "Updated with quote" -token YOUR_TOKEN
 ```
 
 ### Настройка вывода

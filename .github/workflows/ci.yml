@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'examples/**'
+      - 'README.md'
+      - 'KODA.md'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'examples/**'
+      - 'README.md'
+      - 'KODA.md'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Verify dependencies
+      run: go mod verify
+
+    - name: Build
+      run: go build ./...
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Check formatting
+      run: |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "Code is not properly formatted. Run 'go fmt ./...'"
+          gofmt -s -l .
+          exit 1
+        fi
+
+    - name: Vet
+      run: go vet ./...
+
+    - name: Check module boundaries
+      run: |
+        go list -f '{{.ImportPath}} -> {{join .Imports "\n"}}' ./verbosity/...
+        go list -f '{{.ImportPath}} -> {{join .TestImports "\n"}}' ./verbosity/...
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Run golangci-lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        version: latest
+        args: --timeout=5m
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: true
+
+    - name: Run Gosec Security Scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-fmt sarif -out results.sarif ./...'
+
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: results.sarif

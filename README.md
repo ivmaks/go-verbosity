@@ -1,5 +1,10 @@
 # go-verbosity
 
+[![CI](https://github.com/ivmaks/go-verbosity/workflows/CI/badge.svg)](https://github.com/ivmaks/go-verbosity/actions)
+[![Release](https://github.com/ivmaks/go-verbosity/workflows/Release/badge.svg)](https://github.com/ivmaks/go-verbosity/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ivmaks/go-verbosity)](https://goreportcard.com/report/github.com/ivmaks/go-verbosity)
+[![GoDoc](https://pkg.go.dev/badge/github.com/ivmaks/go-verbosity/verbosity.svg)](https://pkg.go.dev/github.com/ivmaks/go-verbosity/verbosity)
+
 Go модуль для работы с Verbosity Bot API.
 
 ## Установка
@@ -33,14 +38,6 @@ func main() {
 ```
 
 ## Конфигурация
-
-### Переменные окружения
-
-| Переменная | Описание | По умолчанию |
-|------------|----------|--------------|
-| `VERBOSITY_API_URL` | API URL | `https://api.verbosity.io` |
-| `VERBOSITY_FILE_URL` | URL для загрузки файлов | `https://file.verbosity.io` |
-| `VERBOSITY_API_TOKEN` | Токен бота | (обязательно) |
 
 ### Кастомная конфигурация
 
@@ -198,65 +195,10 @@ response, err := client.UploadAudio(chatID, "/path/to/audio.mp3")
 response, err := client.UploadVideo(chatID, "/path/to/video.mp4")
 ```
 
-## Пример: info-bot
+## Пример использования
 
-В директории `examples/info-bot` находится пример консольного приложения, которое демонстрирует использование всех методов API для получения информации.
+В директории `examples/info-bot` находится полнофункциональное консольное приложение, которое демонстрирует использование всех методов API библиотеки. Подробная документация по сборке, установке и использованию info-bot находится в [`examples/info-bot/README.md`](examples/info-bot/README.md).
 
-### Сборка и запуск
-
-```bash
-cd examples/info-bot
-go build -o info-bot .
-```
-
-### Использование
-
-```bash
-# Показать справку
-./info-bot -help
-
-# Показать версию
-./info-bot -version
-
-# Список всех чатов
-./info-bot -list-chats -token YOUR_TOKEN
-
-# Список всех организаций
-./info-bot -list-orgs -token YOUR_TOKEN
-
-# Информация о пользователе
-./info-bot -user-id 123 -token YOUR_TOKEN
-
-# Информация о чате
-./info-bot -chat-id 456 -token YOUR_TOKEN
-
-# Информация об организации
-./info-bot -org-id 789 -token YOUR_TOKEN
-
-# Найти чат по названию
-./info-bot -chat-title "General" -token YOUR_TOKEN
-
-# Статистика чата
-./info-bot -chat-stats 456 -token YOUR_TOKEN
-
-# Топ-5 чатов по количеству участников
-./info-bot -top-chats-members 5 -token YOUR_TOKEN
-
-# Использование кастомных URL
-./info-bot -api-url https://custom-api.example.com -token YOUR_TOKEN
-
-# Вывод в формате JSON
-./info-bot -list-chats -token YOUR_TOKEN -output json
-```
-
-### Переменные окружения для info-bot
-
-```bash
-export VERBOSITY_API_TOKEN="your-bot-token"
-export VERBOSITY_API_URL="https://api.verbosity.io"
-export VERBOSITY_FILE_URL="https://file.verbosity.io"
-export VERBOSITY_OUTPUT_MODE="text"  # text, json, json-pretty
-```
 
 ## Документация API
 

@@ -1,0 +1,84 @@
+name: Build info-bot
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'examples/info-bot/**'
+      - 'verbosity/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'examples/info-bot/**'
+      - 'verbosity/**'
+      - '.github/workflows/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: false
+
+    - name: Install upx (optional compression)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y upx-ucl
+
+    - name: Build info-bot for Linux x64 (static)
+      run: |
+        cd examples/info-bot
+        
+        # Сборка с отключением CGO для статической линковки
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+        go build \
+          -ldflags="-s -w" \
+          -trimpath \
+          -o info-bot-linux-x64 \
+          .
+        
+        # Проверяем, что бинарник статический
+        file info-bot-linux-x64
+        
+        # Сжимаем бинарник (опционально)
+        upx -q info-bot-linux-x64 || echo "UPX compression failed or not available"
+        
+        # Показываем размер файла
+        ls -lh info-bot-linux-x64
+
+    - name: Test basic functionality
+      run: |
+        cd examples/info-bot
+        
+        # Проверяем, что бинарник запускается и показывает справку
+        ./info-bot-linux-x64 -help | head -5
+        
+        # Проверяем версию
+        ./info-bot-linux-x64 -version
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: info-bot-linux-x64
+        path: examples/info-bot/info-bot-linux-x64
+        retention-days: 30
+
+    - name: Upload to Release (on tags)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: examples/info-bot/info-bot-linux-x64
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

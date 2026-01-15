@@ -1,0 +1,117 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        cache: false
+
+    - name: Install upx
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y upx-ucl
+
+    - name: Build release binary for Linux x64
+      run: |
+        # Сборка только для Linux x64
+        mkdir -p dist
+        
+        echo "Building for Linux x64..."
+        
+        CGO_ENABLED=0 \
+        GOOS=linux \
+        GOARCH=amd64 \
+        go build \
+          -ldflags="-s -w -X main.Version=${GITHUB_REF#refs/tags/}" \
+          -trimpath \
+          -o "dist/info-bot" \
+          examples/info-bot/main.go
+        
+        # Сжатие UPX (игнорируем ошибки)
+        upx -q "dist/info-bot" || echo "UPX compression skipped"
+        
+        # Создаем архив
+        cd dist
+        tar -czf "../info-bot-${GITHUB_REF#refs/tags/}-linux-amd64.tar.gz" "info-bot"
+        cd ..
+        
+        # Показываем размеры файлов
+        ls -lh dist/
+
+    - name: Generate checksums
+      run: |
+        cd dist
+        sha256sum * > checksums.txt
+        cat checksums.txt
+
+    - name: Build library
+      run: |
+        cd verbosity
+        go build .
+
+    - name: Run tests
+      run: go test -v ./...
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## Changes in this release
+          
+          This release includes pre-built binary for the `info-bot` example application for Linux x64.
+          
+          ### Downloads
+          
+          - **Linux x64**: `info-bot-${{ github.ref_name }}-linux-amd64.tar.gz`
+          
+          ### Installation
+          
+          ```bash
+          # Download and extract
+          wget https://github.com/ivmaks/go-verbosity/releases/download/${{ github.ref_name }}/info-bot-${{ github.ref_name }}-linux-amd64.tar.gz
+          tar -xzf info-bot-${{ github.ref_name }}-linux-amd64.tar.gz
+          
+          # Make executable
+          chmod +x info-bot
+          
+          # Run
+          ./info-bot -help
+          ```
+          
+          ### Building from source
+          
+          ```bash
+          go install github.com/ivmaks/go-verbosity/examples/info-bot@latest
+          ```
+          
+          See [README.md](README.md) for more details.
+        files: |
+          dist/*
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-files
+        path: dist/
+        retention-days: 90

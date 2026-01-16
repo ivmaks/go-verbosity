@@ -19,6 +19,62 @@ const (
 	envFileURL    = "VERBOSITY_FILE_URL"
 	envAPIToken   = "VERBOSITY_API_TOKEN"
 	envOutputMode = "VERBOSITY_OUTPUT_MODE"
+	helpTemplate  = `
+ENVIRONMENT VARIABLES:
+    VERBOSITY_API_URL      API URL (default: https://api.verbosity.io )
+    VERBOSITY_FILE_URL     File upload URL (default: https://file.verbosity.io )
+    VERBOSITY_API_TOKEN    Bot API token (required)
+    VERBOSITY_OUTPUT_MODE  Output mode: text, json, json-pretty (default: text)
+
+EXAMPLES:
+    # Get help
+    %[1]s -help
+
+    # Show version
+    %[1]s -version
+
+    # List all chats
+    %[1]s -list-chats -token YOUR_TOKEN
+
+    # List all organizations
+    %[1]s -list-orgs -token YOUR_TOKEN
+
+    # Get user by ID
+    %[1]s -user-id 123 -token YOUR_TOKEN
+
+    # Get chat by ID
+    %[1]s -chat-id 456 -token YOUR_TOKEN
+
+    # Get organization by ID
+    %[1]s -org-id 789 -token YOUR_TOKEN
+
+    # Find chat by title
+    %[1]s -chat-title "General" -token YOUR_TOKEN
+
+    # Show top 5 chats by members
+    %[1]s -top-chats-members 5 -token YOUR_TOKEN
+
+    # Show statistics for a chat
+    %[1]s -chat-stats 456 -token YOUR_TOKEN
+
+    # Send message to chat
+    %[1]s -send-public 456 -message "Hello, chat!" -token YOUR_TOKEN
+
+    # Update message in chat
+    %[1]s -update-chat 456 -update-post 123 -message "Updated message text" -token YOUR_TOKEN
+
+    # Update message with reply and E2E
+    %[1]s -update-chat 456 -update-post 123 -update-reply 100 -update-e2e -message "Updated with reply" -token YOUR_TOKEN
+
+    # Update message with attachments
+    %[1]s -update-chat 456 -update-post 123 -update-attachments "guid1,guid2,guid3" -message "Updated with files" -token YOUR_TOKEN
+
+    # Delete message from chat
+    %[1]s -delete-chat 456 -delete-post 123 -token YOUR_TOKEN
+
+    # Use custom API URL
+    %[1]s -api-url https://custom-api.example.com  -token YOUR_TOKEN
+`
 )
 
 func main() {
@@ -80,63 +136,7 @@ USAGE:
 OPTIONS:
 `, Version, os.Args[0])
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, `
-ENVIRONMENT VARIABLES:
-    VERBOSITY_API_URL      API URL (default: https://api.verbosity.io)
-    VERBOSITY_FILE_URL     File upload URL (default: https://file.verbosity.io)
-    VERBOSITY_API_TOKEN    Bot API token (required)
-    VERBOSITY_OUTPUT_MODE  Output mode: text, json, json-pretty (default: text)
-
-EXAMPLES:
-    # Get help
-    %s -help
-
-    # Show version
-    %s -version
-
-    # List all chats
-    %s -list-chats -token YOUR_TOKEN
-
-    # List all organizations
-    %s -list-orgs -token YOUR_TOKEN
-
-    # Get user by ID
-    %s -user-id 123 -token YOUR_TOKEN
-
-    # Get chat by ID
-    %s -chat-id 456 -token YOUR_TOKEN
-
-    # Get organization by ID
-    %s -org-id 789 -token YOUR_TOKEN
-
-    # Find chat by title
-    %s -chat-title "General" -token YOUR_TOKEN
-
-    # Show top 5 chats by members
-    %s -top-chats-members 5 -token YOUR_TOKEN
-
-    # Show statistics for a chat
-    %s -chat-stats 456 -token YOUR_TOKEN
-
-    # Send message to chat
-    %s -send-public 456 -message "Hello, chat!" -token YOUR_TOKEN
-
-    # Update message in chat
-    %s -update-chat 456 -update-post 123 -message "Updated message text" -token YOUR_TOKEN
-
-    # Update message with reply and E2E
-    %s -update-chat 456 -update-post 123 -update-reply 100 -update-e2e -message "Updated with reply" -token YOUR_TOKEN
-
-    # Update message with attachments
-    %s -update-chat 456 -update-post 123 -update-attachments "guid1,guid2,guid3" -message "Updated with files" -token YOUR_TOKEN
-
-    # Delete message from chat
-    %s -delete-chat 456 -delete-post 123 -token YOUR_TOKEN
-
-
-    # Use custom API URL
-    %s -api-url https://custom-api.example.com -token YOUR_TOKEN
-`, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
+		fmt.Fprintf(os.Stderr, helpTemplate, os.Args[0])
 	}
 
 	flag.Parse()
@@ -342,292 +342,262 @@ type OperationsConfig struct {
 func processOperations(client *verbosity.Client, config *verbosity.Config, ops *OperationsConfig) {
 	// User operations
 	if ops.UserID != 0 {
-		user, err := client.GetUserByID(ops.UserID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting user by ID: %v\n", err)
-		} else {
-			printUser(user, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting user by ID", func() (interface{}, error) {
+			return client.GetUserByID(ops.UserID)
+		}, func(result interface{}) {
+			printUser(result.(*verbosity.User), ops.OutputMode)
+		})
 	}
 
 	if ops.UserName != "" {
-		user, err := client.GetUserByUniqueName(ops.UserName)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting user by name: %v\n", err)
-		} else {
-			printUser(user, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting user by name", func() (interface{}, error) {
+			return client.GetUserByUniqueName(ops.UserName)
+		}, func(result interface{}) {
+			printUser(result.(*verbosity.User), ops.OutputMode)
+		})
 	}
 
 	// Chat operations
 	if ops.ChatID != 0 {
-		chat, err := client.GetChatByID(ops.ChatID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting chat by ID: %v\n", err)
-		} else {
-			printChat(chat, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting chat by ID", func() (interface{}, error) {
+			return client.GetChatByID(ops.ChatID)
+		}, func(result interface{}) {
+			printChat(result.(*verbosity.Chat), ops.OutputMode)
+		})
 	}
 
 	if ops.ChatTitle != "" {
-		chat, err := client.FindChatByTitle(ops.ChatTitle)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error finding chat by title: %v\n", err)
-		} else {
-			printChat(chat, ops.OutputMode)
-		}
+		executeWithErrorHandling("finding chat by title", func() (interface{}, error) {
+			return client.FindChatByTitle(ops.ChatTitle)
+		}, func(result interface{}) {
+			printChat(result.(*verbosity.Chat), ops.OutputMode)
+		})
 	}
 
 	if ops.ListChats {
-		chats, err := client.GetAllChats()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing chats: %v\n", err)
-		} else {
-			printChats(chats, ops.OutputMode)
-		}
+		executeWithErrorHandling("listing chats", func() (interface{}, error) {
+			return client.GetAllChats()
+		}, func(result interface{}) {
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.GetChatMembers != 0 {
-		members, err := client.ChatMemberIDs(ops.GetChatMembers)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting chat members: %v\n", err)
-		} else {
-			printMemberIDs("Chat Members", members, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting chat members", func() (interface{}, error) {
+			return client.ChatMemberIDs(ops.GetChatMembers)
+		}, func(result interface{}) {
+			printMemberIDs("Chat Members", result.([]int64), ops.OutputMode)
+		})
 	}
 
 	if ops.GetChatAdmins != 0 {
-		admins, err := client.ChatAdminIDs(ops.GetChatAdmins)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting chat admins: %v\n", err)
-		} else {
-			printMemberIDs("Chat Admins", admins, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting chat admins", func() (interface{}, error) {
+			return client.ChatAdminIDs(ops.GetChatAdmins)
+		}, func(result interface{}) {
+			printMemberIDs("Chat Admins", result.([]int64), ops.OutputMode)
+		})
 	}
 
 	if ops.TopChatsMembers > 0 {
-		chats, err := client.GetTopChatsByMembers(ops.TopChatsMembers)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting top chats by members: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting top chats by members", func() (interface{}, error) {
+			return client.GetTopChatsByMembers(ops.TopChatsMembers)
+		}, func(result interface{}) {
 			fmt.Printf("Top %d chats by members:\n", ops.TopChatsMembers)
-			printChats(chats, ops.OutputMode)
-		}
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.TopChatsPosts > 0 {
-		chats, err := client.GetTopChatsByPosts(ops.TopChatsPosts)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting top chats by posts: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting top chats by posts", func() (interface{}, error) {
+			return client.GetTopChatsByPosts(ops.TopChatsPosts)
+		}, func(result interface{}) {
 			fmt.Printf("Top %d chats by posts:\n", ops.TopChatsPosts)
-			printChats(chats, ops.OutputMode)
-		}
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.MyChats {
-		chats, err := client.GetMyChats()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting my chats: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting my chats", func() (interface{}, error) {
+			return client.GetMyChats()
+		}, func(result interface{}) {
 			fmt.Println("Chats where bot is a member:")
-			printChats(chats, ops.OutputMode)
-		}
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.FavoriteChats {
-		chats, err := client.GetFavoriteChats()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting favorite chats: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting favorite chats", func() (interface{}, error) {
+			return client.GetFavoriteChats()
+		}, func(result interface{}) {
 			fmt.Println("Favorite chats:")
-			printChats(chats, ops.OutputMode)
-		}
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.PublicChats {
-		chats, err := client.GetPublicChats()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting public chats: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting public chats", func() (interface{}, error) {
+			return client.GetPublicChats()
+		}, func(result interface{}) {
 			fmt.Println("Public chats:")
-			printChats(chats, ops.OutputMode)
-		}
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.PrivateChats {
-		chats, err := client.GetPrivateChats()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting private chats: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting private chats", func() (interface{}, error) {
+			return client.GetPrivateChats()
+		}, func(result interface{}) {
 			fmt.Println("Private chats:")
-			printChats(chats, ops.OutputMode)
-		}
+			printChats(result.(*verbosity.ChatsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.ChatStats != 0 {
-		stats, err := client.GetChatStats(ops.ChatStats)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting chat stats: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting chat stats", func() (interface{}, error) {
+			return client.GetChatStats(ops.ChatStats)
+		}, func(result interface{}) {
 			fmt.Printf("Statistics for chat %d:\n", ops.ChatStats)
-			printStats(stats, ops.OutputMode)
-		}
+			printStats(result.(map[string]interface{}), ops.OutputMode)
+		})
 	}
 
 	// Organization operations
 	if ops.OrgID != 0 {
-		org, err := client.GetOrganizationByID(ops.OrgID)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting organization by ID: %v\n", err)
-		} else {
-			printOrg(org, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting organization by ID", func() (interface{}, error) {
+			return client.GetOrganizationByID(ops.OrgID)
+		}, func(result interface{}) {
+			printOrg(result.(*verbosity.Org), ops.OutputMode)
+		})
 	}
 
 	if ops.OrgTitle != "" {
-		org, err := client.FindOrganizationByTitle(ops.OrgTitle)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error finding organization by title: %v\n", err)
-		} else {
-			printOrg(org, ops.OutputMode)
-		}
+		executeWithErrorHandling("finding organization by title", func() (interface{}, error) {
+			return client.FindOrganizationByTitle(ops.OrgTitle)
+		}, func(result interface{}) {
+			printOrg(result.(*verbosity.Org), ops.OutputMode)
+		})
 	}
 
 	if ops.ListOrgs {
-		orgs, err := client.GetAllOrganizations()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error listing organizations: %v\n", err)
-		} else {
-			printOrgs(orgs, ops.OutputMode)
-		}
+		executeWithErrorHandling("listing organizations", func() (interface{}, error) {
+			return client.GetAllOrganizations()
+		}, func(result interface{}) {
+			printOrgs(result.(*verbosity.OrgsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.GetOrgMembers != 0 {
-		members, err := client.OrganizationMembers(ops.GetOrgMembers)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting organization members: %v\n", err)
-		} else {
-			printMemberIDs("Organization Members", members, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting organization members", func() (interface{}, error) {
+			return client.OrganizationMembers(ops.GetOrgMembers)
+		}, func(result interface{}) {
+			printMemberIDs("Organization Members", result.([]int64), ops.OutputMode)
+		})
 	}
 
 	if ops.GetOrgAdmins != 0 {
-		admins, err := client.OrganizationAdmins(ops.GetOrgAdmins)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting organization admins: %v\n", err)
-		} else {
-			printMemberIDs("Organization Admins", admins, ops.OutputMode)
-		}
+		executeWithErrorHandling("getting organization admins", func() (interface{}, error) {
+			return client.OrganizationAdmins(ops.GetOrgAdmins)
+		}, func(result interface{}) {
+			printMemberIDs("Organization Admins", result.([]int64), ops.OutputMode)
+		})
 	}
 
 	if ops.TopOrgsUsers > 0 {
-		orgs, err := client.GetTopOrgsByUsers(ops.TopOrgsUsers)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting top organizations by users: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting top organizations by users", func() (interface{}, error) {
+			return client.GetTopOrgsByUsers(ops.TopOrgsUsers)
+		}, func(result interface{}) {
 			fmt.Printf("Top %d organizations by users:\n", ops.TopOrgsUsers)
-			printOrgs(orgs, ops.OutputMode)
-		}
+			printOrgs(result.(*verbosity.OrgsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.MyOrgs {
-		orgs, err := client.GetMyOrganizations()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting my organizations: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting my organizations", func() (interface{}, error) {
+			return client.GetMyOrganizations()
+		}, func(result interface{}) {
 			fmt.Println("Organizations where bot is a member:")
-			printOrgs(orgs, ops.OutputMode)
-		}
+			printOrgs(result.(*verbosity.OrgsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.AdminOrgs {
-		orgs, err := client.GetAdminOrganizations()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting admin organizations: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting admin organizations", func() (interface{}, error) {
+			return client.GetAdminOrganizations()
+		}, func(result interface{}) {
 			fmt.Println("Organizations where bot is an admin:")
-			printOrgs(orgs, ops.OutputMode)
-		}
+			printOrgs(result.(*verbosity.OrgsResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.OrgStats != 0 {
-		stats, err := client.GetOrganizationStats(ops.OrgStats)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting organization stats: %v\n", err)
-		} else {
+		executeWithErrorHandling("getting organization stats", func() (interface{}, error) {
+			return client.GetOrganizationStats(ops.OrgStats)
+		}, func(result interface{}) {
 			fmt.Printf("Statistics for organization %d:\n", ops.OrgStats)
-			printStats(stats, ops.OutputMode)
-		}
+			printStats(result.(map[string]interface{}), ops.OutputMode)
+		})
 	}
 
 	// Message sending operations
 	if ops.SendPrivateID != 0 && ops.MessageText != "" {
-		response, err := client.SendPrivateMessageByID(ops.SendPrivateID, ops.MessageText, nil)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error sending private message: %v\n", err)
-		} else {
+		executeWithErrorHandling("sending private message", func() (interface{}, error) {
+			return client.SendPrivateMessageByID(ops.SendPrivateID, ops.MessageText, nil)
+		}, func(result interface{}) {
 			fmt.Printf("Private message sent to user %d:\n", ops.SendPrivateID)
-			printPrivateMessageResponse(response, ops.OutputMode)
-		}
+			printPrivateMessageResponse(result.(*verbosity.PrivateMessageResponse), ops.OutputMode)
+		})
 	}
 
 	if ops.SendPublicID != 0 && ops.MessageText != "" {
-		response, err := client.SendMessage(ops.SendPublicID, ops.MessageText, nil)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error sending message to chat: %v\n", err)
-		} else {
+		executeWithErrorHandling("sending message to chat", func() (interface{}, error) {
+			return client.SendMessage(ops.SendPublicID, ops.MessageText, nil)
+		}, func(result interface{}) {
 			fmt.Printf("Message sent to chat %d:\n", ops.SendPublicID)
-			printMessageResponse(response, ops.OutputMode)
-		}
+			printMessageResponse(result.(*verbosity.MessageResponse), ops.OutputMode)
+		})
 	}
 
 	// Message update operations
 	if ops.UpdateChatID != 0 && ops.UpdatePostNo != 0 && ops.MessageText != "" {
-		updateReq := &verbosity.UpdateMessageRequest{
-			Text: ops.MessageText,
-			E2E:  &ops.UpdateE2E,
-		}
-
-		if ops.UpdateReplyNo != 0 {
-			updateReq.ReplyNo = &ops.UpdateReplyNo
-		}
-
-		if ops.UpdateQuote != "" {
-			updateReq.Quote = &ops.UpdateQuote
-		}
-
-		if ops.UpdateAttachments != "" {
-			// Parse comma-separated attachment GUIDs
-			attachments := strings.Split(ops.UpdateAttachments, ",")
-			for i := range attachments {
-				attachments[i] = strings.TrimSpace(attachments[i])
+		executeWithErrorHandling("updating message", func() (interface{}, error) {
+			updateReq := &verbosity.UpdateMessageRequest{
+				Text: ops.MessageText,
+				E2E:  &ops.UpdateE2E,
 			}
-			updateReq.Attachments = attachments
-		}
 
-		response, err := client.UpdateMessage(ops.UpdateChatID, ops.UpdatePostNo, updateReq)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error updating message: %v\n", err)
-		} else {
+			if ops.UpdateReplyNo != 0 {
+				updateReq.ReplyNo = &ops.UpdateReplyNo
+			}
+
+			if ops.UpdateQuote != "" {
+				updateReq.Quote = &ops.UpdateQuote
+			}
+
+			if ops.UpdateAttachments != "" {
+				// Parse comma-separated attachment GUIDs
+				attachments := strings.Split(ops.UpdateAttachments, ",")
+				for i := range attachments {
+					attachments[i] = strings.TrimSpace(attachments[i])
+				}
+				updateReq.Attachments = attachments
+			}
+
+			return client.UpdateMessage(ops.UpdateChatID, ops.UpdatePostNo, updateReq)
+		}, func(result interface{}) {
 			fmt.Printf("Message updated in chat %d (post %d):\n", ops.UpdateChatID, ops.UpdatePostNo)
-			printUpdateMessageResponse(response, ops.OutputMode)
-		}
+			printUpdateMessageResponse(result.(*verbosity.UpdateMessageResponse), ops.OutputMode)
+		})
 	}
 
 	// Message deletion operations
 	if ops.DeleteChatID != 0 && ops.DeletePostNo != 0 {
-		var response *verbosity.DeleteMessageResponse
-		var err error
-
-		response, err = client.DeleteMessage(ops.DeleteChatID, ops.DeletePostNo)
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error deleting message: %v\n", err)
-		} else {
+		executeWithErrorHandling("deleting message", func() (interface{}, error) {
+			return client.DeleteMessage(ops.DeleteChatID, ops.DeletePostNo)
+		}, func(result interface{}) {
+			response := result.(*verbosity.DeleteMessageResponse)
 			fmt.Printf("Message deleted from chat %d (post %d):\n", ops.DeleteChatID, ops.DeletePostNo)
 			printDeleteMessageResponse(response, ops.OutputMode)
-		}
+		})
 	}
 }
 
@@ -714,4 +684,14 @@ func countOperations(args ...interface{}) int {
 		}
 	}
 	return count
+}
+
+// executeWithErrorHandling выполняет функцию и обрабатывает ошибки универсально
+func executeWithErrorHandling(operationName string, fn func() (interface{}, error), successHandler func(interface{})) {
+	result, err := fn()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error %s: %v\n", operationName, err)
+	} else {
+		successHandler(result)
+	}
 }

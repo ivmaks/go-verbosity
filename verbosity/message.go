@@ -255,3 +255,28 @@ func (c *Client) UpdateMessageE2E(chatID, postNo int64, text string, e2e bool) (
 	}
 	return c.UpdateMessage(chatID, postNo, updateReq)
 }
+
+// DeleteMessage deletes a message from a chat.
+//
+// API: DELETE /msg/post/{chat_id}/{post_no}
+func (c *Client) DeleteMessage(chatID, postNo int64) (*DeleteMessageResponse, error) {
+	if chatID == 0 {
+		return nil, fmt.Errorf("chat_id cannot be zero")
+	}
+	if postNo == 0 {
+		return nil, fmt.Errorf("post_no cannot be zero")
+	}
+
+	url := fmt.Sprintf("/msg/post/%d/%d", chatID, postNo)
+	req, err := c.newRequest(http.MethodDelete, url, nil, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response DeleteMessageResponse
+	if err := c.do(req, &response); err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}

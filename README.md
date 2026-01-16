@@ -195,6 +195,13 @@ response, err := client.UpdateMessageWithReply(chatID, postNo, replyPostNo, "Rep
 response, err := client.UpdateMessageE2E(chatID, postNo, "E2E message", true)
 ```
 
+### Удаление сообщений
+
+```go
+// Удалить сообщение из чата
+response, err := client.DeleteMessage(chatID, postNo)
+```
+
 ### Загрузка файлов
 
 ```go

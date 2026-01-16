@@ -67,6 +67,10 @@ func main() {
 	updateQuote := flag.String("update-quote", "", "Quote text for updated message")
 	updateAttachments := flag.String("update-attachments", "", "Comma-separated list of attachment GUIDs")
 
+	// Message deletion flags
+	deleteChatID := flag.Int64("delete-chat", 0, "Chat ID for message deletion")
+	deletePostNo := flag.Int64("delete-post", 0, "Post number to delete")
+
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, `Info-Bot for Verbosity API v%s
 
@@ -126,9 +130,13 @@ EXAMPLES:
     # Update message with attachments
     %s -update-chat 456 -update-post 123 -update-attachments "guid1,guid2,guid3" -message "Updated with files" -token YOUR_TOKEN
 
+    # Delete message from chat
+    %s -delete-chat 456 -delete-post 123 -token YOUR_TOKEN
+
+
     # Use custom API URL
     %s -api-url https://custom-api.example.com -token YOUR_TOKEN
-`, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
+`, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
 	}
 
 	flag.Parse()
@@ -176,6 +184,7 @@ EXAMPLES:
 		*myOrgs, *adminOrgs, *chatStats, *orgStats,
 		*sendPrivateID, *sendPublicID, *messageText,
 		*updateChatID, *updatePostNo, *updateE2E, *updateReplyNo, *updateQuote,
+		*updateAttachments, *deleteChatID, *deletePostNo,
 	)
 
 	if operations == 0 {
@@ -225,6 +234,10 @@ EXAMPLES:
 		fmt.Println("  -update-quote <text>     Quote text for updated message")
 		fmt.Println("  -update-attachments <g1,g2,...>  Comma-separated list of attachment GUIDs")
 		fmt.Println("  -message <text>          New message text (required for update)")
+		fmt.Println()
+		fmt.Println("Message Deletion:")
+		fmt.Println("  -delete-chat <id>        Chat ID for message deletion")
+		fmt.Println("  -delete-post <no>        Post number to delete")
 		fmt.Println()
 		fmt.Println("Options:")
 		fmt.Println("  -api-url <url>   API URL (default: https://api.verbosity.io)")
@@ -277,6 +290,8 @@ EXAMPLES:
 		UpdateReplyNo:     *updateReplyNo,
 		UpdateQuote:       *updateQuote,
 		UpdateAttachments: *updateAttachments,
+		DeleteChatID:      *deleteChatID,
+		DeletePostNo:      *deletePostNo,
 		OutputMode:        *outputMode,
 	})
 
@@ -319,6 +334,8 @@ type OperationsConfig struct {
 	UpdateReplyNo     int64
 	UpdateQuote       string
 	UpdateAttachments string
+	DeleteChatID      int64
+	DeletePostNo      int64
 	OutputMode        string
 }
 
@@ -597,6 +614,21 @@ func processOperations(client *verbosity.Client, config *verbosity.Config, ops *
 			printUpdateMessageResponse(response, ops.OutputMode)
 		}
 	}
+
+	// Message deletion operations
+	if ops.DeleteChatID != 0 && ops.DeletePostNo != 0 {
+		var response *verbosity.DeleteMessageResponse
+		var err error
+
+		response, err = client.DeleteMessage(ops.DeleteChatID, ops.DeletePostNo)
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error deleting message: %v\n", err)
+		} else {
+			fmt.Printf("Message deleted from chat %d (post %d):\n", ops.DeleteChatID, ops.DeletePostNo)
+			printDeleteMessageResponse(response, ops.OutputMode)
+		}
+	}
 }
 
 // Вспомогательные функции для вывода
@@ -622,6 +654,16 @@ func printUpdateMessageResponse(resp *verbosity.UpdateMessageResponse, mode stri
 		"chat_id": resp.ChatID,
 		"post_no": resp.PostNo,
 		"version": resp.Version,
+	}
+	printData(data, mode)
+}
+
+func printDeleteMessageResponse(resp *verbosity.DeleteMessageResponse, mode string) {
+	data := map[string]interface{}{
+		"uuid":    resp.UUID,
+		"chat_id": resp.ChatID,
+		"post_no": resp.PostNo,
+		"deleted": resp.Deleted,
 	}
 	printData(data, mode)
 }

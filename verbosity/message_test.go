@@ -333,3 +333,127 @@ func int64Ptr(i int64) *int64 {
 func stringPtr(s string) *string {
 	return &s
 }
+
+// Test DeleteMessage functionality
+func TestDeleteMessage(t *testing.T) {
+	// Mock server to simulate API responses
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Verify request method and URL
+		if r.Method != http.MethodDelete {
+			t.Errorf("Expected method DELETE, got %s", r.Method)
+		}
+
+		expectedURL := "/msg/post/123/456"
+		if r.URL.Path != expectedURL {
+			t.Errorf("Expected URL %s, got %s", expectedURL, r.URL.Path)
+		}
+
+		// Verify API token header
+		token := r.Header.Get("X-APIToken")
+		if token != "test_token_1234567890123456789012" {
+			t.Errorf("Expected API token 'test_token_1234567890123456789012', got '%s'", token)
+		}
+
+		// Return success response
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(DeleteMessageResponse{
+			UUID:    "test-uuid-delete-123",
+			ChatID:  123,
+			PostNo:  456,
+			Deleted: true,
+		})
+	}))
+	defer server.Close()
+
+	// Create client with mock server
+	config := &Config{
+		APIURL:   server.URL,
+		FileURL:  server.URL,
+		APIToken: "test_token_1234567890123456789012",
+	}
+	client := NewClient(config)
+
+	// Test successful deletion
+	response, err := client.DeleteMessage(123, 456)
+	if err != nil {
+		t.Errorf("DeleteMessage should not return error: %v", err)
+	}
+
+	if response == nil {
+		t.Error("DeleteMessage should return response")
+	}
+
+	if response.UUID != "test-uuid-delete-123" {
+		t.Errorf("Expected UUID 'test-uuid-delete-123', got '%s'", response.UUID)
+	}
+
+	if response.ChatID != 123 {
+		t.Errorf("Expected ChatID 123, got %d", response.ChatID)
+	}
+
+	if response.PostNo != 456 {
+		t.Errorf("Expected PostNo 456, got %d", response.PostNo)
+	}
+
+	if !response.Deleted {
+		t.Error("Expected Deleted to be true")
+	}
+}
+
+func TestDeleteMessageValidation(t *testing.T) {
+	config := &Config{
+		APIURL:   "https://api.test.com",
+		FileURL:  "https://file.test.com",
+		APIToken: "test_token_1234567890123456789012",
+	}
+	client := NewClient(config)
+
+	// Test with zero chat ID
+	_, err := client.DeleteMessage(0, 456)
+	if err == nil {
+		t.Error("DeleteMessage should return error for zero chat ID")
+	}
+
+	// Test with zero post number
+	_, err = client.DeleteMessage(123, 0)
+	if err == nil {
+		t.Error("DeleteMessage should return error for zero post number")
+	}
+}
+
+func TestDeleteMessageResponseMarshaling(t *testing.T) {
+	// Test response structure
+	resp := &DeleteMessageResponse{
+		UUID:    "test-uuid-delete",
+		ChatID:  123,
+		PostNo:  456,
+		Deleted: true,
+	}
+
+	data, err := json.Marshal(resp)
+	if err != nil {
+		t.Errorf("Failed to marshal DeleteMessageResponse: %v", err)
+	}
+
+	var unmarshaled DeleteMessageResponse
+	if err := json.Unmarshal(data, &unmarshaled); err != nil {
+		t.Errorf("Failed to unmarshal DeleteMessageResponse: %v", err)
+	}
+
+	if unmarshaled.UUID != "test-uuid-delete" {
+		t.Errorf("Expected UUID 'test-uuid-delete', got '%s'", unmarshaled.UUID)
+	}
+
+	if unmarshaled.ChatID != 123 {
+		t.Errorf("Expected ChatID 123, got %d", unmarshaled.ChatID)
+	}
+
+	if unmarshaled.PostNo != 456 {
+		t.Errorf("Expected PostNo 456, got %d", unmarshaled.PostNo)
+	}
+
+	if !unmarshaled.Deleted {
+		t.Error("Expected Deleted to be true")
+	}
+}

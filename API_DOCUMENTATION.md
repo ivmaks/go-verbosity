@@ -9,6 +9,30 @@
 
 ### DELETE /msg/post/{chat_id}/{post_no}
 
+Удаляет сообщение из чата.
+
+#### Параметры пути
+
+- `chat_id` (integer, required) - ID чата
+- `post_no` (integer, required) - номер поста для удаления
+
+#### Ответ
+
+```json
+{
+  "uuid": "<string>",      // string, required - UUID удаленного сообщения
+  "chat_id": "<ChatId>",   // integer, required - ID чата
+  "post_no": "<PostNo>",   // integer, required - номер поста
+  "deleted": true          // boolean, required - флаг успешного удаления
+}
+```
+
+#### Пример использования
+
+```go
+// Удалить сообщение без причины
+response, err := client.DeleteMessage(chatID, postNo)
+```
 
 ## Обновление сообщений
 

@@ -154,3 +154,11 @@ type UpdateMessageResponse struct {
 	PostNo  int64  `json:"post_no"`
 	Version *int   `json:"ver,omitempty"`
 }
+
+// DeleteMessageResponse represents the response for message deletion.
+type DeleteMessageResponse struct {
+	UUID    string `json:"uuid"`
+	ChatID  int64  `json:"chat_id"`
+	PostNo  int64  `json:"post_no"`
+	Deleted bool   `json:"deleted"`
+}
